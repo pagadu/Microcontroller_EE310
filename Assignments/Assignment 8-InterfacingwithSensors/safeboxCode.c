@@ -39,6 +39,8 @@ void main() {
     configure_ports();
     INTERRUPT_Initialize();
     
+    chk_no_pressed_cnt = 0;
+    chk_no_pressed_max_cnt = 4000;
     while (1) {
         updateSegDis(SEGDIS_val);
         keypad_code = readKeypad();
@@ -47,6 +49,10 @@ void main() {
             SEGDIS_val = 0;
             num_pr1_pressed = 0;
             num_pr2_pressed = 0;
+            num_pr1_pressed_prev = num_pr1_pressed;
+            num_pr2_pressed_prev = num_pr2_pressed;
+            something_pressed = 0;
+            chk_no_pressed_cnt = 0;
             PORTCbits.RC4 = 0;
             PORTCbits.RC5 = 0;
             if (keypad_code == 10) {
@@ -90,6 +96,23 @@ void main() {
             //PORTCbits.RC5 = 0;
         }
   
+        something_pressed = 0;
+        if ((num_pr1_pressed != 0) && (num_pr1_pressed != num_pr1_pressed_prev)) {
+            something_pressed = 1;
+            num_pr1_pressed_prev = num_pr1_pressed;
+        }
+        if ((num_pr1_pressed != 0) && (num_pr1_pressed != num_pr1_pressed_prev)) {
+            something_pressed = 1;
+            num_pr2_pressed_prev = num_pr2_pressed;
+        }
+        
+        if (something_pressed) {
+            chk_no_pressed_cnt = 0;
+        } else if (num_pr1_pressed != 0) {
+            chk_no_pressed_cnt = chk_no_pressed_cnt + 1;
+        }
+
+
         if (((num_pr1_pressed != 0) && (num_pr1_pressed == ((safe_code >> 0) & 0x0f))) &&
             ((num_pr2_pressed != 0) && (num_pr2_pressed == ((safe_code >> 4) & 0x0f)))) {
             keypad_done = 1;
@@ -104,12 +127,17 @@ void main() {
             SEGDIS_val = 0;
             num_pr1_pressed = 0;
             num_pr2_pressed = 0;
+            num_pr1_pressed_prev = num_pr1_pressed;
+            num_pr2_pressed_prev = num_pr2_pressed;
+            something_pressed = 0;
+            chk_no_pressed_cnt = 0;
             delay(1,1000);
             keypad_done = 0;
         }
         
-        if (((num_pr1_pressed != 0) && (num_pr1_pressed != ((safe_code >> 0) & 0x0f))) &&
-            ((num_pr2_pressed != 0) && (num_pr2_pressed >  ((             4) & 0x0f)))) {
+        if ((((num_pr1_pressed != 0) && (num_pr1_pressed != ((safe_code >> 0) & 0x0f))) &&
+             ((num_pr2_pressed != 0) && (num_pr2_pressed >  ((             4) & 0x0f)))) ||
+            (chk_no_pressed_cnt >= chk_no_pressed_max_cnt)) {
             keypad_done = 1;
             delay(1,1000);
             PORTCbits.RC4 = 1;
@@ -122,6 +150,10 @@ void main() {
             SEGDIS_val = 0;
             num_pr1_pressed = 0;
             num_pr2_pressed = 0;
+            num_pr1_pressed_prev = num_pr1_pressed;
+            num_pr2_pressed_prev = num_pr2_pressed;
+            something_pressed = 0;
+            chk_no_pressed_cnt = 0;
             delay(1,1000);
             keypad_done = 0;
         }
