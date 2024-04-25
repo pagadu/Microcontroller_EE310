@@ -25,6 +25,7 @@ extern "C" {
 #define KEYPAD_TRIS  TRISA
 #define KEYPAD_LAT   LATA
 #define KEYPAD_ANSEL ANSELA
+#define KEYPAD_ROW_PORT  PORTB
 
 #define PR_PORT  PORTB
 #define PR_TRIS  TRISB
@@ -76,6 +77,7 @@ const int keypad_dis[ROWS][COLS] = {
 void delay(int num1, int num2);
 void motor(int num1, int num2);
 void buzzer(int num1, int num2);
+void melody(int num1, int num2);
 int keypad_dec_to_seg(int input_val);
 void initializeVars(void);
 int readKeypad();
@@ -89,25 +91,40 @@ void PWM_Initialize (void);
 
 void delay(int num1, int num2) {
     int cnt1, cnt2;
-   for (cnt1=0; cnt1<num1; cnt1++)
+    for (cnt1=0; cnt1<num1; cnt1++) {
        for (cnt2=0; cnt2<num2; cnt2++)
        {}
+    }
 }
 
 void motor(int num1, int num2) {
     int cnt1, cnt2;
-   for (cnt1=0; cnt1<num1; cnt1++)
+    for (cnt1=0; cnt1<num1; cnt1++) {
        for (cnt2=0; cnt2<num2; cnt2++) {
            PORTAbits.RA5 = ((cnt2 < 1)) ;
        }
+    }
 }
 
 void buzzer(int num1, int num2) {
     int cnt1, cnt2;
-   for (cnt1=0; cnt1<num1; cnt1++)
+    for (cnt1=0; cnt1<num1; cnt1++) {
        for (cnt2=0; cnt2<num2; cnt2++) {
            PORTAbits.RA4 = cnt1 & 0b00000001;
        }
+    }
+}
+
+void melody(int num1, int num2) {
+    int cnt1, cnt2;
+    for (cnt1=0; cnt1<num1; cnt1++) {
+        buzzer(10,1000);
+        delay (10,1000);
+        buzzer(4,1000);
+        delay (4,1000);
+        buzzer(20,1000);
+        delay (4,1000);
+    }
 }
 
 int keypad_dec_to_seg(int input_val) {
@@ -153,7 +170,7 @@ int readKeypad() {
         PORTAbits.RA3 = (col == 3);
         
         //Read keypad rows 
-        keypad_val = ((PR_PORT & 0b00111100) << 2);
+        keypad_val = ((KEYPAD_ROW_PORT & 0b11110000) << 0);
         
         //Cycle through the rows
         for (row = 0; row < ROWS; row++) {
@@ -167,7 +184,7 @@ int readKeypad() {
                 
                 // Wait for button to be depressed
                 while (button_pressed == 1) { 
-                    keypad_val = ((PR_PORT & 0b00111100) << 2);
+                    keypad_val = ((KEYPAD_ROW_PORT & 0b11110000) << 0);
                     //if keypad is zero then the button was depressed
                     if (keypad_val == 0) {
                         button_pressed = 0;
@@ -197,16 +214,16 @@ void configure_ports() {
     KEYPAD_LAT = 0;
     KEYPAD_ANSEL = 0b00010000;
     KEYPAD_TRIS = 0b00000000; // Set first 4 pins as outputs for COL
-                              // RA4 is PWM for buzzer PWM5OUT
+                              // RA4 is Output for buzzer
 
     // Initialize ports for Photo-resistors
     PR_PORT = 0;
     PR_LAT = 0;
     PR_ANSEL = 0;
-    INLVLB = 0b00000011; // trips at a higher voltage
+    INLVLB = 0b00000111; // trips at a higher voltage
     //INLVLB = 0b00000000; // trips at 1.4V, too sensitive
-    PR_TRIS = 0b00111111; // Inputs for monitoring PRs
-                          // bits[5:2] used for keypad row]
+    PR_TRIS = 0b11111111; // Inputs for monitoring PRs
+                          // bits[7:4] used for keypad row]
     
     // Initialize ports for LED, BUZZER, MOTOR
     LED_PORT = 0;
@@ -226,7 +243,7 @@ void configure_ports() {
 void __interrupt(irq(IRQ_INT0),base(0x4008)) INT0_ISR(void)
 {
             if (PIR1bits.INT0IF == 1) { 
-                if (keypad_done == 0) {
+                if (keypad_done == 0) { // motor affect interrupts
                     if (num_pr2_pressed != 0) {
                         num_pr1_pressed = 1;
                         num_pr2_pressed = 0;
@@ -248,7 +265,7 @@ void __interrupt(irq(IRQ_INT0),base(0x4008)) INT0_ISR(void)
 void __interrupt(irq(IRQ_INT1),base(0x4008)) INT1_ISR(void)
 {
             if (PIR5bits.INT1IF == 1) { 
-                if (keypad_done == 0) {
+                if (keypad_done == 0) { // motor affect interrupts
                     if (num_pr1_pressed != 0) {
                         num_pr2_pressed = num_pr2_pressed + 1;
                         SEGDIS_val = keypad_dec_to_seg(num_pr2_pressed & 0xf);
@@ -265,6 +282,21 @@ void __interrupt(irq(IRQ_INT1),base(0x4008)) INT1_ISR(void)
             }
 }
 
+// Defining Interrupt ISR 
+void __interrupt(irq(IRQ_INT2),base(0x4008)) INT2_ISR(void)
+{
+            if (PIR7bits.INT2IF == 1) { 
+                if (keypad_done == 0) { // motor affect interrupts
+                    melody(5,1000);
+                }
+                //PORTCbits.RC6 = 1;
+                //delay(8,1000);
+                //PORTCbits.RC6 = 0;
+                PIR7bits.INT2IF = 0;
+            }
+}
+
+
 void __interrupt(irq(default), base(0x4008)) DEFAULT_ISR(void)
 {
         // Unhandled interrupts go here
@@ -275,18 +307,23 @@ void INTERRUPT_Initialize (void)
     INTCON0bits.IPEN = 1; // Enable interrupt priority
     INTCON0bits.GIEH = 1; // Enable high priority interrupts
     INTCON0bits.GIEL = 1; // Enable low priority interrupts
-    
-    INTCON0bits.INT1EDG = 1; // Interrupt on rising edge of INT1 pin
-    IPR5bits.INT1IP = 1; //  External Interrupt 1 Interrupt Priority bit
-    PIE5bits.INT1IE = 1; // External Interrupt 1 Enable bit
-    
+   
     INTCON0bits.INT0EDG = 1; // Interrupt on rising edge of INT0 pin
     IPR1bits.INT0IP = 1; // External Interrupt 0 Interrupt Priority bit
     PIE1bits.INT0IE = 1; // External Interrupt 0 Enable bit
 
-    PIR5bits.INT1IF = 0;  // Clear Interrupt 1
+    INTCON0bits.INT1EDG = 1; // Interrupt on rising edge of INT1 pin
+    IPR5bits.INT1IP = 1; //  External Interrupt 1 Interrupt Priority bit
+    PIE5bits.INT1IE = 1; // External Interrupt 1 Enable bit
+    
+    INTCON0bits.INT2EDG = 1; // Interrupt on rising edge of INT2 pin
+    IPR7bits.INT2IP = 1; //  External Interrupt 2 Interrupt Priority bit
+    PIE7bits.INT2IE = 1; // External Interrupt 2 Enable bit
+    
     PIR1bits.INT0IF = 0;  // Clear Interrupt 0
-  
+    PIR5bits.INT1IF = 0;  // Clear Interrupt 1
+    PIR7bits.INT2IF = 0;  // Clear Interrupt 2
+    
     // Change IVTBASE by doing the following
     // Set IVTBASEU to 0x00
     IVTBASEU = 0b00000000;
