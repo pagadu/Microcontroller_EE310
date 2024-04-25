@@ -27,6 +27,11 @@ int key1_display;
 int key2_display;
 int num_pr1_pressed;
 int num_pr2_pressed;
+int num_pr1_pressed_prev;
+int num_pr2_pressed_prev;
+int something_pressed;
+int chk_no_pressed_cnt;
+int chk_no_pressed_max_cnt;
 int safe_code;
 int keypad_code;
 int keypad_done;
@@ -43,6 +48,11 @@ void initializeVars() {
     key2_display = 0;
     num_pr1_pressed = 0;
     num_pr2_pressed = 0;
+    num_pr1_pressed_prev = 0;
+    num_pr2_pressed_prev = 0;
+    something_pressed = 0;
+    chk_no_pressed_cnt = 0;
+    chk_no_pressed_max_cnt = 0;
     safe_code = 0x00;
     keypad_code = 0x00;
     keypad_done = 0;
@@ -50,4 +60,6 @@ void initializeVars() {
 
 
 #endif	/* SAFEBOXINITIALIZATION_H */
+
+
 
