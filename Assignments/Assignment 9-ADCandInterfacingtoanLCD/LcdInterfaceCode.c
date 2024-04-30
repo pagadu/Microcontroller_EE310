@@ -8,8 +8,7 @@
 // Outputs: RD0, RD1, RB0, RB1, RB2, RB3, RB4, RB5, RB6, RB7
 //          
 // Date: April 30, 2024
-// File Dependencies / Libraries: SafeboxConfig.h, SafeboxFunction.h,
-//                                SafeboxInitialization.h
+// File Dependencies / Libraries: LcdInterfaceConfig.h
 // Compiler: xc8, 2.46
 // Author: Alexander Pagaduan
 // Versions:
