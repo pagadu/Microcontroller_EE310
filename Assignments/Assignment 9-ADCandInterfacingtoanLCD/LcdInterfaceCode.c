@@ -18,7 +18,6 @@
 //       PIC18F Instruction Sets: https://onlinelibrary.wiley.com/doi/pdf/10.1002/9781119448457.app4 
 //       List of Instrcutions: http://143.110.227.210/faridfarahmand/sonoma/courses/es310/resources/20140217124422790.pdf 
 
-
 //---------------------
 // INITIALIZATION
 //---------------------
@@ -92,7 +91,9 @@ void main() {
         //LCD_String_xy(2,0,data);/*Send string data for printing*/
         
         lux_val = (((lux_m) * ((float)voltage)) + lux_b);
-                
+        if (lux_val < 0) {
+            lux_val = 0;
+        }
         sprintf(data,"%f",lux_val);
         strcat(data," LUX");
         LCD_String_xy(1,0,"TheInputLight:"); 
