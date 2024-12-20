@@ -1,2 +1,2 @@
 # Microcontroller_EE310
-dr farid faramands class spring2024
+Dr. Farid Farahmands EE310 Spring2024 Course
